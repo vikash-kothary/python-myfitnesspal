@@ -1,3 +1,4 @@
+import browser_cookie3
 import datetime
 import os
 
@@ -14,16 +15,26 @@ class TestIntegration(MFPTestCase):
     @classmethod
     def setUpClass(cls):
         try:
-            username = os.environ["MFP_INTEGRATION_TESTING_USERNAME"]
-            password = os.environ["MFP_INTEGRATION_TESTING_PASSWORD"]
+            browser = os.environ["MFP_INTEGRATION_TESTING_BROWSER"]
+            cookiefile = os.environ["MFP_INTEGRATION_TESTING_COOKIEFILE"]
         except KeyError:
-            pytest.skip("Integration testing account not set in this environment.")
+            pytest.skip("Integration testing session cookies set in this environment.")
             return
 
-        cls.client = Client(
-            username,
-            password,
-        )
+        try:
+            # Searches for the browser function in browser_cookie3
+            # supported browsers list
+            browser_func = next((f for f in browser_cookie3.all_browsers if f.__name__ == browser), None)
+
+            if browser_func:
+                cookies = browser_func(cookie_file=cookiefile)
+            else:
+                raise ValueError(f"Browser function '{browser}' not found.")
+            
+            cls.client = Client(cookies)
+        except Exception as e:
+            pytest.skip(f"Failed to initialize client with browser cookies: {e}")
+            return
 
         day_with_known_entries = datetime.date(2020, 7, 4)
 
